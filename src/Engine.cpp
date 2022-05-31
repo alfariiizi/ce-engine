@@ -15,6 +15,8 @@ int Engine::Compute()
     auto si = vk::SubmitInfo{};
     si.setCommandBuffers( m_cmdBuffer );
     m_computeQueue.submit( si, VK_NULL_HANDLE );
+
+    return 0;
 }
 
 void Engine::PrepareCommandBuffer()
