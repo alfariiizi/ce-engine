@@ -8,6 +8,7 @@
 Engine::Engine()
 {
     this->InitializeVulkanBase();
+    this->PrepareCommandPool();
     this->PrepareCommandBuffer();
 }
 
@@ -19,7 +20,7 @@ Engine::~Engine()
 int Engine::Compute()
 {
     auto si = vk::SubmitInfo{};
-    si.setCommandBuffers( m_cmdBuffer );
+    si.setCommandBuffers( m_pCmdBuffer.get() );
     m_computeQueue.submit( si, VK_NULL_HANDLE );
 
     return 0;
@@ -95,35 +96,45 @@ void Engine::InitializeVulkanBase()
     //// Pick Physical Device and Create Device
     {
         m_physicalDevice = this->PickPhysicalDevice( m_queueFlags );
-        m_device = this->CreateDevice();
+        m_pDevice = this->CreateDevice();
 
         auto queueFam = FindQueueFamilyIndices( m_physicalDevice, m_queueFlags );
         vk::DeviceQueueInfo2 qi = {};
 
         // "1" because we want queueFamily of 0 (why? because queuefaily of 0 have more queue count)
         // In the future, maybe it coulbe be source of bug.
-        qi.setQueueFamilyIndex( queueFam[1].value() );
+        m_queueFamilyIndex = static_cast<uint32_t>(queueFam[1].value());
+        qi.setQueueFamilyIndex( m_queueFamilyIndex );
         qi.setQueueIndex(0);
-        m_computeQueue = m_device->getQueue2( qi );
+        m_computeQueue = m_pDevice->getQueue2( qi );
     }
+}
+
+void Engine::PrepareCommandPool()
+{
+    vk::CommandPoolCreateInfo poolInfo {};
+    poolInfo.setQueueFamilyIndex( m_queueFamilyIndex );
+    poolInfo.setFlags( vk::CommandPoolCreateFlagBits::eResetCommandBuffer );
+
+    m_pCmdPool = m_pDevice->createCommandPoolUnique( poolInfo );
 }
 
 void Engine::PrepareCommandBuffer()
 {
     auto allocInfo = vk::CommandBufferAllocateInfo{};
-    allocInfo.setCommandPool( m_cmdPool );
+    allocInfo.setCommandPool( m_pCmdPool.get() );
     allocInfo.setLevel( vk::CommandBufferLevel::ePrimary );
     allocInfo.setCommandBufferCount( 1 );
-    m_cmdBuffer = m_pDevice->allocateCommandBuffers( allocInfo ).front();
+    m_pCmdBuffer = std::move( m_pDevice->allocateCommandBuffersUnique( allocInfo ).front() );
 
     auto beginInfo = vk::CommandBufferBeginInfo{};
     beginInfo.setFlags( vk::CommandBufferUsageFlagBits::eOneTimeSubmit );
 
-    m_cmdBuffer.begin( beginInfo );
+    m_pCmdBuffer->begin( beginInfo );
     
-    m_cmdBuffer.dispatch( 1, 1, 1 );
+    m_pCmdBuffer->dispatch( 1, 1, 1 );
 
-    m_cmdBuffer.end();
+    m_pCmdBuffer->end();
 }
 
 vk::PhysicalDevice Engine::PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags)

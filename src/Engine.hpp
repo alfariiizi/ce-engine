@@ -14,6 +14,7 @@ public:
 
 private:
     void InitializeVulkanBase();
+    void PrepareCommandPool();
     void PrepareCommandBuffer();
 
 private: // For supporting the initialize vulkan base
@@ -27,15 +28,15 @@ private: // Utility
 
 private:
     DeletionQueue                           m_delQueue; // For non-smart-pointer (raw heap's allocation) variable
+    uint32_t                                m_queueFamilyIndex;
     const std::vector<vk::QueueFlagBits>    m_queueFlags = { vk::QueueFlagBits::eCompute };
 
 private:
     vk::UniqueInstance          m_pInstance;
-    vk::PhysicalDevice          m_physicalDevice;
-    vk::UniqueDevice            m_device;
     vk::DebugUtilsMessengerEXT  m_debugUtils;
+    vk::PhysicalDevice          m_physicalDevice;
     vk::UniqueDevice            m_pDevice;
-    vk::CommandPool             m_cmdPool;
-    vk::CommandBuffer           m_cmdBuffer;
+    vk::UniqueCommandPool       m_pCmdPool;
+    vk::UniqueCommandBuffer     m_pCmdBuffer;
     vk::Queue                   m_computeQueue;
 };
