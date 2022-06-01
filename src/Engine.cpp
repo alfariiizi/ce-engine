@@ -78,14 +78,14 @@ void Engine::InitializeVulkanBase()
             enableValidationLayers.push_back( layer );
         }
 
-        /// The Extensensions
+        // The Extensensions
         // vk::enumerateInstanceExtensionProperties();
-        uint32_t extensionCount = 0;
-        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-        std::vector<VkExtensionProperties> extensions(extensionCount);
-        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
+        // uint32_t extensionCount = 0;
+        // vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+        // std::vector<VkExtensionProperties> extensions(extensionCount);
+        // vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
         auto instanceExtensions = vk::enumerateInstanceExtensionProperties();
-        auto enabledExtensions = this->InstanceExtensions();
+        auto enabledExtensions = this->InstanceExtensions();    // Assume that the extensions is available
         for ( const auto& extension : enabledExtensions )
         {
             auto found = std::find_if( instanceExtensions.begin(), instanceExtensions.end(),
@@ -93,7 +93,6 @@ void Engine::InitializeVulkanBase()
             );
             assert( found != instanceExtensions.end() );
         }
-
 
         /// Instance create info
         vk::InstanceCreateInfo instanceInfo {};
@@ -123,7 +122,9 @@ void Engine::InitializeVulkanBase()
         m_device = this->CreateDevice();
         {
             auto queueFamilyIndices = this->FindQueueFamilyIndices( m_physicalDevice, m_queueFlags );
-            m_computeQueue = m_pDevice->getQueue( queueFamilyIndices[0].value(), 0 );
+            auto tmp = static_cast<uint32_t>( queueFamilyIndices[0].value() );
+            auto tmp2 = static_cast<uint32_t>( queueFamilyIndices[1].value() );
+            m_computeQueue = m_pDevice->getQueue( 0, 0 );
         }
     }
 }
@@ -131,23 +132,23 @@ void Engine::InitializeVulkanBase()
 vk::PhysicalDevice Engine::PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags)
 {
     auto physicalDevices = m_pInstance->enumeratePhysicalDevices();
-    vk::PhysicalDevice choose;
-    for( auto& physicalDevice : physicalDevices )
-    {
-        bool found = true;
-        auto indices = FindQueueFamilyIndices( physicalDevice, flags );
-        for( const auto& i : indices )
-        {
-            if( !i.has_value() )
-                found = false;
-        }
+    vk::PhysicalDevice choose = physicalDevices[0];
+    // for( auto& physicalDevice : physicalDevices )
+    // {
+    //     bool found = true;
+    //     auto indices = FindQueueFamilyIndices( physicalDevice, flags );
+    //     for( const auto& i : indices )
+    //     {
+    //         if( !i.has_value() )
+    //             found = false;
+    //     }
 
-        if( found )
-        {
-            choose = physicalDevice;
-            break;
-        }
-    }
+    //     if( found )
+    //     {
+    //         choose = physicalDevice;
+    //         break;
+    //     }
+    // }
     return choose;
 }
 
@@ -162,6 +163,8 @@ std::vector<std::optional<size_t>> Engine::FindQueueFamilyIndices( const vk::Phy
     std::vector<std::optional<size_t>> queueFamilyIndices;
     queueFamilyIndices.reserve( queueFamilies.size() );
 
+    std::vector<uint32_t> qfis;
+
     size_t i = 0;
     for( const auto& prop : queueFamilyProperties )
     {
@@ -169,12 +172,14 @@ std::vector<std::optional<size_t>> Engine::FindQueueFamilyIndices( const vk::Phy
         for( const auto& queueFam : queueFamilies )
         {
             if( prop.queueCount > 0 &&
-                (prop.queueFlags & queueFam) )
+                (prop.queueFlags & queueFam))
             {
                 queueFamilyIndices[j] = i;
+                qfis.push_back(static_cast<uint32_t>(i));
             }
             ++j;
         }
+        ++i;
     }
 
     // i = 0;
@@ -200,6 +205,7 @@ std::vector<const char*> Engine::InstanceExtensions()
     std::vector<const char*> extensions;
 
     extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    // extensions.push_back(VK_NV_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME);
 
     return extensions;
 }
@@ -211,18 +217,20 @@ std::vector<const char*> Engine::InstanceValidations()
 
 vk::UniqueDevice Engine::CreateDevice()
 {
-    auto queueFamily = FindQueueFamilyIndices( m_physicalDevice, m_queueFlags );
+    // auto queueFamily = FindQueueFamilyIndices( m_physicalDevice, m_queueFlags );
+    // uint32_t queueIndex = static_cast<uint32_t>( queueFamily[1].value() );
+    uint32_t queueIndex = static_cast<uint32_t>(0);
 
     float queuePriority = 1.0f;
     vk::DeviceQueueCreateInfo queueInfo {
         vk::DeviceQueueCreateFlags(),
-        queueFamily[0].value(), // NOTE: assume that index 0 is for compute family queue
+        queueIndex, // NOTE: assume that index 0 is for compute family queue
         1,              // queue count
         &queuePriority  // queue priority
     };
 
     // auto deviceExtensions = m_physicalDevice.enumerateDeviceExtensionProperties();
-    // std::vector<const char*> enabledExtension = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    // std::vector<const char*> enabledExtension = { VK_NV_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME };
     // std::vector<const char*> extensions;
     // extensions.reserve( enabledExtension.size() );
     // for ( const auto& extension : enabledExtension )
@@ -234,6 +242,7 @@ vk::UniqueDevice Engine::CreateDevice()
     //     extensions.push_back( extension );
     // }
     std::vector<const char*> extensions = {}; // For now, i do not use any extension
+    
 
     auto deviceFeatures = m_physicalDevice.getFeatures();
     auto validateLayers = this->InstanceValidations();
