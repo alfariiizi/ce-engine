@@ -4,13 +4,15 @@ project( engine )
 
 add_library( engineSystem
     Engine.cpp
+    # vk_init.cpp
+    # vk_utils.cpp
 )
 
 target_link_libraries( engineSystem
     PUBLIC
         vulkan
-        dl
-        pthread
+        # dl
+        # pthread
         # Xxf86vm
         # Xrandr
         # Xi
