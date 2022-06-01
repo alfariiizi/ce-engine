@@ -1,5 +1,8 @@
-#include <vulkan/vulkan.hpp>
+#pragma once
+
 #include "DeletionQueue.hpp"
+
+#include <vulkan/vulkan.hpp>
 #include <optional>
 
 class Engine
@@ -10,8 +13,8 @@ public:
     int Compute();
 
 private:
-    void PrepareCommandBuffer();
     void InitializeVulkanBase();
+    void PrepareCommandBuffer();
 
 private: // For supporting the initialize vulkan base
     vk::PhysicalDevice PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags);
@@ -23,8 +26,8 @@ private: // Utility
     std::vector<std::optional<size_t>> FindQueueFamilyIndices( const vk::PhysicalDevice& physicalDevice, const std::vector<vk::QueueFlagBits>& flags );
 
 private:
-    DeletionQueue               m_delQueue; // For non-smart-pointer (raw heap's allocation) variable
-    const std::vector<vk::QueueFlagBits> m_queueFlags = { vk::QueueFlagBits::eCompute };
+    DeletionQueue                           m_delQueue; // For non-smart-pointer (raw heap's allocation) variable
+    const std::vector<vk::QueueFlagBits>    m_queueFlags = { vk::QueueFlagBits::eCompute };
 
 private:
     vk::UniqueInstance          m_pInstance;

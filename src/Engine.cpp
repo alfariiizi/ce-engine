@@ -1,8 +1,8 @@
 #include "Engine.hpp"
-#include "DebugUtilsMessenger.hpp"
-#include <vector>
-// #include "vk_init.hpp"
 
+#include "DebugUtilsMessenger.hpp"
+
+#include <vector>
 #include <optional>
 
 Engine::Engine()
@@ -23,24 +23,6 @@ int Engine::Compute()
     m_computeQueue.submit( si, VK_NULL_HANDLE );
 
     return 0;
-}
-
-void Engine::PrepareCommandBuffer()
-{
-    auto allocInfo = vk::CommandBufferAllocateInfo{};
-    allocInfo.setCommandPool( m_cmdPool );
-    allocInfo.setLevel( vk::CommandBufferLevel::ePrimary );
-    allocInfo.setCommandBufferCount( 1 );
-    m_cmdBuffer = m_pDevice->allocateCommandBuffers( allocInfo ).front();
-
-    auto beginInfo = vk::CommandBufferBeginInfo{};
-    beginInfo.setFlags( vk::CommandBufferUsageFlagBits::eOneTimeSubmit );
-
-    m_cmdBuffer.begin( beginInfo );
-    
-    m_cmdBuffer.dispatch( 1, 1, 1 );
-
-    m_cmdBuffer.end();
 }
 
 void Engine::InitializeVulkanBase()
@@ -78,12 +60,6 @@ void Engine::InitializeVulkanBase()
             enableValidationLayers.push_back( layer );
         }
 
-        // The Extensensions
-        // vk::enumerateInstanceExtensionProperties();
-        // uint32_t extensionCount = 0;
-        // vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-        // std::vector<VkExtensionProperties> extensions(extensionCount);
-        // vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
         auto instanceExtensions = vk::enumerateInstanceExtensionProperties();
         auto enabledExtensions = this->InstanceExtensions();    // Assume that the extensions is available
         for ( const auto& extension : enabledExtensions )
@@ -120,46 +96,61 @@ void Engine::InitializeVulkanBase()
     {
         m_physicalDevice = this->PickPhysicalDevice( m_queueFlags );
         m_device = this->CreateDevice();
+
+        auto queueFam = FindQueueFamilyIndices( m_physicalDevice, m_queueFlags );
         vk::DeviceQueueInfo2 qi = {};
-        qi.setQueueFamilyIndex(0);
+
+        // "1" because we want queueFamily of 0 (why? because queuefaily of 0 have more queue count)
+        // In the future, maybe it coulbe be source of bug.
+        qi.setQueueFamilyIndex( queueFam[1].value() );
         qi.setQueueIndex(0);
         m_computeQueue = m_device->getQueue2( qi );
-        // {
-        //     auto queueFamilyIndices = this->FindQueueFamilyIndices( m_physicalDevice, m_queueFlags );
-        //     auto tmp = static_cast<uint32_t>( queueFamilyIndices[0].value() );
-        //     auto tmp2 = static_cast<uint32_t>( queueFamilyIndices[1].value() );
-        //     m_computeQueue = m_pDevice->getQueue( 0, 1 );
-        // }
     }
+}
+
+void Engine::PrepareCommandBuffer()
+{
+    auto allocInfo = vk::CommandBufferAllocateInfo{};
+    allocInfo.setCommandPool( m_cmdPool );
+    allocInfo.setLevel( vk::CommandBufferLevel::ePrimary );
+    allocInfo.setCommandBufferCount( 1 );
+    m_cmdBuffer = m_pDevice->allocateCommandBuffers( allocInfo ).front();
+
+    auto beginInfo = vk::CommandBufferBeginInfo{};
+    beginInfo.setFlags( vk::CommandBufferUsageFlagBits::eOneTimeSubmit );
+
+    m_cmdBuffer.begin( beginInfo );
+    
+    m_cmdBuffer.dispatch( 1, 1, 1 );
+
+    m_cmdBuffer.end();
 }
 
 vk::PhysicalDevice Engine::PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags)
 {
     auto physicalDevices = m_pInstance->enumeratePhysicalDevices();
-    vk::PhysicalDevice choose = physicalDevices[0];
-    // for( auto& physicalDevice : physicalDevices )
-    // {
-    //     bool found = true;
-    //     auto indices = FindQueueFamilyIndices( physicalDevice, flags );
-    //     for( const auto& i : indices )
-    //     {
-    //         if( !i.has_value() )
-    //             found = false;
-    //     }
+    vk::PhysicalDevice choose;
+    for( auto& physicalDevice : physicalDevices )
+    {
+        bool found = true;
+        auto indices = FindQueueFamilyIndices( physicalDevice, flags );
+        for( const auto& i : indices )
+        {
+            if( !i.has_value() )
+                found = false;
+        }
 
-    //     if( found )
-    //     {
-    //         choose = physicalDevice;
-    //         break;
-    //     }
-    // }
+        if( found )
+        {
+            choose = physicalDevice;
+            break;
+        }
+    }
     return choose;
 }
 
 std::vector<std::optional<size_t>> Engine::FindQueueFamilyIndices( const vk::PhysicalDevice& physicalDevice, const std::vector<vk::QueueFlagBits>& flags )
 {
-    // bool isFound = true;
-
     auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
     auto& queueFamilies = flags;
 
@@ -186,49 +177,21 @@ std::vector<std::optional<size_t>> Engine::FindQueueFamilyIndices( const vk::Phy
         ++i;
     }
 
-    // i = 0;
-    // for( const auto& q : queueFamilyIndices )
-    // {
-    //     if( !q.has_value() )
-    //         // throw std::runtime_error( std::string("FAILED: Queue family at index " + i) );
-    //         isFound = false;
-    //     ++i;
-    // }
-
     return queueFamilyIndices;
-}
-
-std::vector<const char*> Engine::InstanceExtensions()
-{
-    /// Extensions for GLFW
-    // uint32_t glfwExtensionCount = 0;
-    // const char** glfwExtensions;
-    // glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-    // std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-    std::vector<const char*> extensions;
-
-    extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    // extensions.push_back(VK_NV_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME);
-
-    return extensions;
-}
-
-std::vector<const char*> Engine::InstanceValidations()
-{
-    return { "VK_LAYER_KHRONOS_validation" };
 }
 
 vk::UniqueDevice Engine::CreateDevice()
 {
-    // auto queueFamily = FindQueueFamilyIndices( m_physicalDevice, m_queueFlags );
-    // uint32_t queueIndex = static_cast<uint32_t>( queueFamily[1].value() );
-    uint32_t queueIndex = static_cast<uint32_t>(0);
+    auto queueFamily = FindQueueFamilyIndices( m_physicalDevice, m_queueFlags );
+
+    // "1" because we want queueFamily of 0 (why? because queuefaily of 0 have more queue count)
+    // In the future, maybe it coulbe be source of bug.
+    uint32_t queueIndex = static_cast<uint32_t>( queueFamily[1].value() );
 
     float queuePriority = 1.0f;
     vk::DeviceQueueCreateInfo queueInfo {
         vk::DeviceQueueCreateFlags(),
-        queueIndex, // NOTE: assume that index 0 is for compute family queue
+        queueIndex,     // NOTE: This also could be source of bug, in the future.
         1,              // queue count
         &queuePriority  // queue priority
     };
@@ -259,4 +222,25 @@ vk::UniqueDevice Engine::CreateDevice()
     };
 
     return m_physicalDevice.createDeviceUnique( deviceInfo );
+}
+
+std::vector<const char*> Engine::InstanceExtensions()
+{
+    /// Extensions for GLFW
+    // uint32_t glfwExtensionCount = 0;
+    // const char** glfwExtensions;
+    // glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+    // std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+    std::vector<const char*> extensions;
+
+    extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    // extensions.push_back(VK_NV_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME);
+
+    return extensions;
+}
+
+std::vector<const char*> Engine::InstanceValidations()
+{
+    return { "VK_LAYER_KHRONOS_validation" };
 }
