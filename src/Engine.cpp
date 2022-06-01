@@ -120,12 +120,16 @@ void Engine::InitializeVulkanBase()
     {
         m_physicalDevice = this->PickPhysicalDevice( m_queueFlags );
         m_device = this->CreateDevice();
-        {
-            auto queueFamilyIndices = this->FindQueueFamilyIndices( m_physicalDevice, m_queueFlags );
-            auto tmp = static_cast<uint32_t>( queueFamilyIndices[0].value() );
-            auto tmp2 = static_cast<uint32_t>( queueFamilyIndices[1].value() );
-            m_computeQueue = m_pDevice->getQueue( 0, 0 );
-        }
+        vk::DeviceQueueInfo2 qi = {};
+        qi.setQueueFamilyIndex(0);
+        qi.setQueueIndex(0);
+        m_computeQueue = m_device->getQueue2( qi );
+        // {
+        //     auto queueFamilyIndices = this->FindQueueFamilyIndices( m_physicalDevice, m_queueFlags );
+        //     auto tmp = static_cast<uint32_t>( queueFamilyIndices[0].value() );
+        //     auto tmp2 = static_cast<uint32_t>( queueFamilyIndices[1].value() );
+        //     m_computeQueue = m_pDevice->getQueue( 0, 1 );
+        // }
     }
 }
 
