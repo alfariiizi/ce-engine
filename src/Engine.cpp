@@ -170,10 +170,12 @@ void Engine::PrepareCommandBuffer()
     /// ==================
     m_pCmdBuffer->begin( beginInfo );
     /// ------------------
-    
-    m_pCmdBuffer->bindPipeline( vk::PipelineBindPoint::eCompute, m_pPipeline.get() );
-    m_pCmdBuffer->bindDescriptorSets( vk::PipelineBindPoint::eCompute, m_pPipelineLayout.get(), 0, m_pSet.get(), nullptr );
-    m_pCmdBuffer->dispatch( 1, 1, 1 );
+
+    {
+        m_pCmdBuffer->bindPipeline( vk::PipelineBindPoint::eCompute, m_pPipeline.get() );
+        m_pCmdBuffer->bindDescriptorSets( vk::PipelineBindPoint::eCompute, m_pPipelineLayout.get(), 0, m_pSet.get(), nullptr );
+        m_pCmdBuffer->dispatch( 1, 1, 1 );
+    }
 
     /// End Recording
     /// =============
