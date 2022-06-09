@@ -14,8 +14,13 @@
 Engine::Engine()
 {
     this->InitializeVulkanBase();
+
     this->CreatePipelineLayout();
     this->CreatePipeline();
+
+    this->CreateDescriptorPool();
+    this->AllocateDescriptorSet();
+
     this->PrepareCommandPool();
     this->PrepareCommandBuffer();
 }
@@ -146,17 +151,42 @@ void Engine::PrepareCommandBuffer()
     auto beginInfo = vk::CommandBufferBeginInfo{};
     beginInfo.setFlags( vk::CommandBufferUsageFlagBits::eOneTimeSubmit );
 
+    /// Begin to Recording
+    /// ==================
     m_pCmdBuffer->begin( beginInfo );
+    /// ------------------
     
     m_pCmdBuffer->bindPipeline( vk::PipelineBindPoint::eCompute, m_pPipeline.get() );
     m_pCmdBuffer->dispatch( 1, 1, 1 );
 
+    /// End Recording
+    /// =============
     m_pCmdBuffer->end();
+    /// -------------
 }
 
 void Engine::CreatePipelineLayout()
 {
+    /// Descriptor Set Layout
+    {
+        std::array<vk::DescriptorSetLayoutBinding, 2> setLayoutBinding;
+        setLayoutBinding[0].setBinding( 0 );
+        setLayoutBinding[0].setDescriptorCount( 1 );
+        setLayoutBinding[0].setDescriptorType( vk::DescriptorType::eStorageBuffer );
+        setLayoutBinding[0].setStageFlags( vk::ShaderStageFlagBits::eCompute );
+        setLayoutBinding[1].setBinding( 1 );
+        setLayoutBinding[1].setDescriptorCount( 1 );
+        setLayoutBinding[1].setDescriptorType( vk::DescriptorType::eStorageBuffer );
+        setLayoutBinding[1].setStageFlags( vk::ShaderStageFlagBits::eCompute );
+
+        auto setLayoutInfo = vk::DescriptorSetLayoutCreateInfo{};
+        setLayoutInfo.setBindings( setLayoutBinding );
+
+        m_pSetLayout = m_pDevice->createDescriptorSetLayoutUnique( setLayoutInfo );
+    }
+
     auto layoutInfo = vk::PipelineLayoutCreateInfo{};
+    layoutInfo.setSetLayouts( m_pSetLayout.get() );
     m_pPipelineLayout = m_pDevice->createPipelineLayoutUnique( layoutInfo );
 }
 
@@ -184,6 +214,29 @@ void Engine::CreatePipeline()
     auto checker =  m_pDevice->createComputePipelinesUnique( VK_NULL_HANDLE, pipelineInfo );
     assert( checker.result == vk::Result::eSuccess );
     m_pPipeline = std::move( checker.value[0] );    // Because we just create single pipeline
+}
+
+void Engine::CreateDescriptorPool()
+{
+    std::vector<vk::DescriptorPoolSize> poolSizes {
+        { vk::DescriptorType::eStorageBuffer, 10 }
+    };
+
+    auto descPoolInfo = vk::DescriptorPoolCreateInfo{};
+    descPoolInfo.setPoolSizes( poolSizes );
+    descPoolInfo.setMaxSets( 10 );
+
+    m_pDescPool = m_pDevice->createDescriptorPoolUnique( descPoolInfo );
+}
+
+void Engine::AllocateDescriptorSet()
+{
+    auto setAllocateInfo = vk::DescriptorSetAllocateInfo{};
+    setAllocateInfo.setDescriptorPool( m_pDescPool.get() );
+    setAllocateInfo.setSetLayouts( m_pSetLayout.get() );
+    setAllocateInfo.setDescriptorSetCount( 1 );
+
+    m_pSet = std::move( m_pDevice->allocateDescriptorSetsUnique( setAllocateInfo )[0] );
 }
 
 vk::PhysicalDevice Engine::PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags)

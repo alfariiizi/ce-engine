@@ -18,6 +18,8 @@ private:
     void PrepareCommandBuffer();
     void CreatePipelineLayout();
     void CreatePipeline();
+    void CreateDescriptorPool();
+    void AllocateDescriptorSet();
 
 private: // For supporting the initialize vulkan base
     vk::PhysicalDevice PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags);
@@ -36,13 +38,17 @@ private:
     const std::vector<vk::QueueFlagBits>    m_queueFlags = { vk::QueueFlagBits::eCompute };
 
 private:
-    vk::UniqueInstance          m_pInstance;
-    vk::DebugUtilsMessengerEXT  m_debugUtils;
-    vk::PhysicalDevice          m_physicalDevice;
-    vk::UniqueDevice            m_pDevice;
-    vk::UniqueCommandPool       m_pCmdPool;
-    vk::UniqueCommandBuffer     m_pCmdBuffer;
-    vk::Queue                   m_computeQueue;
-    vk::UniquePipelineLayout    m_pPipelineLayout;
-    vk::UniquePipeline          m_pPipeline;
+    vk::UniqueInstance                          m_pInstance;
+    vk::DebugUtilsMessengerEXT                  m_debugUtils;
+    vk::PhysicalDevice                          m_physicalDevice;
+    vk::UniqueDevice                            m_pDevice;
+    vk::UniqueCommandPool                       m_pCmdPool;
+    vk::UniqueCommandBuffer                     m_pCmdBuffer;
+    vk::Queue                                   m_computeQueue;
+    vk::UniquePipelineLayout                    m_pPipelineLayout;
+    vk::UniquePipeline                          m_pPipeline;
+    vk::UniqueDescriptorSetLayout               m_pSetLayout;
+    vk::UniqueDescriptorPool                    m_pDescPool;
+    // std::vector<vk::UniqueDescriptorSet>        m_pSets;
+    vk::UniqueDescriptorSet                     m_pSet;
 };
