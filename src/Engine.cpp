@@ -26,6 +26,8 @@ Engine::Engine()
     this->CreateDescriptorPool();
     this->AllocateDescriptorSet();
 
+    this->AllocateBuffers();
+
     this->PrepareCommandPool();
     this->PrepareCommandBuffer();
 }
@@ -255,6 +257,19 @@ void Engine::AllocateDescriptorSet()
     setAllocateInfo.setDescriptorSetCount( 1 );
 
     m_pSet = std::move( m_pDevice->allocateDescriptorSetsUnique( setAllocateInfo )[0] );
+
+    auto allocInfo = vma::AllocationCreateInfo{};
+    allocInfo.setUsage( vma::MemoryUsage::eCpuToGpu );
+}
+
+void Engine::AllocateBuffers()
+{
+    m_inputBuffer = this->CreateBuffer( sizeof(inputData), vk::BufferUsageFlagBits::eStorageBuffer, vma::MemoryUsage::eCpuToGpu );
+    m_outputBuffer = this->CreateBuffer( sizeof(outputData), vk::BufferUsageFlagBits::eStorageBuffer, vma::MemoryUsage::eCpuToGpu );
+    m_delQueue.pushFunction([a=m_allocator, i=m_inputBuffer, o=m_outputBuffer](){
+        a.destroyBuffer( i.buffer, i.allocation );
+        a.destroyBuffer( o.buffer, o.allocation );
+    });
 }
 
 vk::PhysicalDevice Engine::PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags) const
@@ -409,4 +424,22 @@ vk::UniqueShaderModule Engine::CreateShaderModule( const std::string& fileName )
     shaderModuleInfo.setPCode( reinterpret_cast<uint32_t*>(code.data()) );
 
     return m_pDevice->createShaderModuleUnique( shaderModuleInfo );
+}
+
+Buffer Engine::CreateBuffer( size_t allocSize, vk::BufferUsageFlags bufferUsageFlag, vma::MemoryUsage memoryUsage ) const
+{
+    auto bufferInfo = vk::BufferCreateInfo{};
+    bufferInfo.setSize( allocSize );
+    bufferInfo.setUsage( bufferUsageFlag );
+    bufferInfo.setSharingMode( vk::SharingMode::eExclusive );
+
+    auto allocInfo = vma::AllocationCreateInfo{};
+    allocInfo.setUsage( memoryUsage );
+
+    auto tmp = m_allocator.createBuffer( bufferInfo, allocInfo );
+    Buffer buffer;
+    buffer.buffer = tmp.first;
+    buffer.allocation = tmp.second;
+
+    return buffer;
 }

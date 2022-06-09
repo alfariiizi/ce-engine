@@ -8,6 +8,14 @@
 #include "vk_mem_alloc.h"
 #include "vk_mem_alloc.hpp"
 
+struct Buffer
+{
+    vk::Buffer buffer;
+    // vk::DeviceMemory memory;
+    // vk::DeviceSize size;
+    vma::Allocation allocation;
+};
+
 class Engine
 {
 public:
@@ -21,25 +29,31 @@ private:
     void CreatePipeline();
     void CreateDescriptorPool();
     void AllocateDescriptorSet();
+    void AllocateBuffers();
     void PrepareCommandPool();
     void PrepareCommandBuffer();
 
-private: // For supporting the initialize vulkan base
+private: // Utility
     vk::PhysicalDevice PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags) const;
     vk::UniqueDevice CreateDevice() const;
     std::vector<char> readFile( const std::string& fileName, bool isSPIRV = true ) const;
     vk::UniqueShaderModule CreateShaderModule( const std::string& fileName ) const;
-
-private: // Utility
     std::vector<const char*> InstanceExtensions() const;
     std::vector<const char*> InstanceValidations() const;
     std::vector<std::optional<size_t>> FindQueueFamilyIndices( const vk::PhysicalDevice& physicalDevice, const std::vector<vk::QueueFlagBits>& flags ) const;
+    Buffer CreateBuffer( size_t allocSize, vk::BufferUsageFlags bufferUsageFlag, vma::MemoryUsage memoryUsage ) const;
 
 private:
     DeletionQueue                           m_delQueue; // For non-smart-pointer (raw heap's allocation) variable
     uint32_t                                m_queueFamilyIndex;
     const std::vector<vk::QueueFlagBits>    m_queueFlags = { vk::QueueFlagBits::eCompute };
     vma::Allocator                          m_allocator;
+
+private: // Buffer
+    int inputData[1000];
+    Buffer m_inputBuffer;
+    float outputData[1000];
+    Buffer m_outputBuffer;
 
 private:
     vk::UniqueInstance                          m_pInstance;
