@@ -39,6 +39,16 @@ Engine::~Engine()
 
 int Engine::Compute()
 {
+    /// Before doing computing
+    {
+        for( int i = 0; i < 1000; ++i )
+        {
+            inputData[i] = i;
+            outputData[i] = 0;
+        }
+        this->CopyToBuffer( inputData, sizeof(inputData), m_inputBuffer );
+    }
+
     auto pFence = m_pDevice->createFenceUnique( vk::FenceCreateInfo{} );
 
     auto si = vk::SubmitInfo{};
@@ -49,6 +59,15 @@ int Engine::Compute()
     if( result != vk::Result::eSuccess )
     {
         throw std::runtime_error("Failed to wait fence");
+    }
+
+    /// After doing computing
+    {
+        this->CopyFromBuffer( outputData, sizeof(outputData), m_outputBuffer ); // Copying compute's result
+        for( int i = 0; i < 1000; i += 50 )
+        {
+            std::cout << inputData[i] << " -> " << outputData[i] << "\n";
+        }
     }
 
     return 0;
@@ -176,7 +195,7 @@ void Engine::PrepareCommandBuffer()
     {
         m_pCmdBuffer->bindPipeline( vk::PipelineBindPoint::eCompute, m_pPipeline.get() );
         m_pCmdBuffer->bindDescriptorSets( vk::PipelineBindPoint::eCompute, m_pPipelineLayout.get(), 0, m_pSet.get(), nullptr );
-        m_pCmdBuffer->dispatch( 1, 1, 1 );
+        m_pCmdBuffer->dispatch( 2, 1, 1 );
     }
 
     /// End Recording

@@ -44,6 +44,26 @@ private: // Utility
     Buffer CreateBuffer( size_t allocSize, vk::BufferUsageFlags bufferUsageFlag, vma::MemoryUsage memoryUsage ) const;
 
 private:
+    template<typename T>
+    void CopyToBuffer( T* dataToCopy, size_t dataSize, Buffer dstBuffer )
+    {
+        void* data;
+        if( m_allocator.mapMemory( dstBuffer.allocation, &data ) != vk::Result::eSuccess )
+            throw std::runtime_error("Failed to mapping memory\n");
+        memcpy( data, dataToCopy, dataSize );
+        m_allocator.unmapMemory( dstBuffer.allocation );
+    }
+    template<typename T>
+    void CopyFromBuffer( T* variable, size_t dataSize, Buffer srcBuffer )
+    {
+        void* data;
+        if( m_allocator.mapMemory( srcBuffer.allocation, &data ) != vk::Result::eSuccess )
+            throw std::runtime_error("Failed to mapping memory\n");
+        memcpy( variable, data, dataSize );
+        m_allocator.unmapMemory( srcBuffer.allocation );
+    }
+
+private:
     DeletionQueue                           m_delQueue; // For non-smart-pointer (raw heap's allocation) variable
     uint32_t                                m_queueFamilyIndex;
     const std::vector<vk::QueueFlagBits>    m_queueFlags = { vk::QueueFlagBits::eCompute };
