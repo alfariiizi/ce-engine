@@ -16,10 +16,14 @@ private:
     void InitializeVulkanBase();
     void PrepareCommandPool();
     void PrepareCommandBuffer();
+    void CreatePipelineLayout();
+    void CreatePipeline();
 
 private: // For supporting the initialize vulkan base
     vk::PhysicalDevice PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags);
     vk::UniqueDevice CreateDevice();
+    std::vector<char> readFile( const std::string& fileName, bool isSPIRV = true );
+    vk::UniqueShaderModule CreateShaderModule( const std::string& fileName );
 
 private: // Utility
     std::vector<const char*> InstanceExtensions();
@@ -39,4 +43,6 @@ private:
     vk::UniqueCommandPool       m_pCmdPool;
     vk::UniqueCommandBuffer     m_pCmdBuffer;
     vk::Queue                   m_computeQueue;
+    vk::UniquePipelineLayout    m_pPipelineLayout;
+    vk::UniquePipeline          m_pPipeline;
 };

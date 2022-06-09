@@ -11,6 +11,7 @@ add_library( engineSystem
 target_link_libraries( engineSystem
     PUBLIC
         vulkan
+        shaderc
         # dl
         # pthread
         # Xxf86vm

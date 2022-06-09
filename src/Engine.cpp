@@ -4,10 +4,18 @@
 
 #include <vector>
 #include <optional>
+#include <fstream>
+#include <shaderc/shaderc.hpp>
+
+#ifndef SHADER_PATH
+    #define SHADER_PATH
+#endif
 
 Engine::Engine()
 {
     this->InitializeVulkanBase();
+    this->CreatePipelineLayout();
+    this->CreatePipeline();
     this->PrepareCommandPool();
     this->PrepareCommandBuffer();
 }
@@ -19,9 +27,17 @@ Engine::~Engine()
 
 int Engine::Compute()
 {
+    auto pFence = m_pDevice->createFenceUnique( vk::FenceCreateInfo{} );
+
     auto si = vk::SubmitInfo{};
     si.setCommandBuffers( m_pCmdBuffer.get() );
-    m_computeQueue.submit( si, VK_NULL_HANDLE );
+    m_computeQueue.submit( si, pFence.get() );
+
+    auto result = m_pDevice->waitForFences( pFence.get(), true, UINT64_MAX );
+    if( result != vk::Result::eSuccess )
+    {
+        throw std::runtime_error("Failed to wait fence");
+    }
 
     return 0;
 }
@@ -132,9 +148,42 @@ void Engine::PrepareCommandBuffer()
 
     m_pCmdBuffer->begin( beginInfo );
     
+    m_pCmdBuffer->bindPipeline( vk::PipelineBindPoint::eCompute, m_pPipeline.get() );
     m_pCmdBuffer->dispatch( 1, 1, 1 );
 
     m_pCmdBuffer->end();
+}
+
+void Engine::CreatePipelineLayout()
+{
+    auto layoutInfo = vk::PipelineLayoutCreateInfo{};
+    m_pPipelineLayout = m_pDevice->createPipelineLayoutUnique( layoutInfo );
+}
+
+void Engine::CreatePipeline()
+{
+    /// Creating Module
+    /// ===============
+    auto shaderPath = std::string(SHADER_PATH) + std::string("/shader.comp.spv");
+    auto pShaderModule = this->CreateShaderModule( shaderPath );
+
+    /// Filling Shader Stage Info
+    /// ==========================
+    auto shaderStageInfo = vk::PipelineShaderStageCreateInfo{};
+    shaderStageInfo.setStage( vk::ShaderStageFlagBits::eCompute );
+    shaderStageInfo.setPName("main");
+    shaderStageInfo.setModule( pShaderModule.get() );
+
+    /// Creating Pipeline
+    /// =================
+    auto pipelineInfo = vk::ComputePipelineCreateInfo{};
+    pipelineInfo.setStage( shaderStageInfo );
+    pipelineInfo.setBasePipelineIndex( -1 );
+    pipelineInfo.setLayout( m_pPipelineLayout.get() );
+
+    auto checker =  m_pDevice->createComputePipelinesUnique( VK_NULL_HANDLE, pipelineInfo );
+    assert( checker.result == vk::Result::eSuccess );
+    m_pPipeline = std::move( checker.value[0] );    // Because we just create single pipeline
 }
 
 vk::PhysicalDevice Engine::PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags)
@@ -254,4 +303,39 @@ std::vector<const char*> Engine::InstanceExtensions()
 std::vector<const char*> Engine::InstanceValidations()
 {
     return { "VK_LAYER_KHRONOS_validation" };
+}
+
+std::vector<char> Engine::readFile( const std::string& fileName, bool isSPIRV )
+{
+    std::ifstream file(fileName, std::ios::ate | std::ios::binary);
+
+    if (!file.is_open()) {
+        throw std::runtime_error(std::string("Failed to open: ") + fileName);
+    }
+
+    // if( !isSPIRV )
+    // {
+    //     auto compiler = shaderc::Compiler{};
+    //     auto options = shaderc::CompileOptions{};
+    //     shaderc::SpvCompilationResult moduleResult = compiler.CompileGlslToSpv()
+    // }
+
+    size_t fileSize = (size_t)file.tellg();
+    std::vector<char> buffer(fileSize);
+    file.seekg(0);
+    file.read(buffer.data(), fileSize);
+
+    file.close();
+
+    return buffer;
+}
+
+vk::UniqueShaderModule Engine::CreateShaderModule( const std::string& fileName )
+{
+    auto code = this->readFile( fileName );
+    auto shaderModuleInfo = vk::ShaderModuleCreateInfo{};
+    shaderModuleInfo.setCodeSize( code.size() );
+    shaderModuleInfo.setPCode( reinterpret_cast<uint32_t*>(code.data()) );
+
+    return m_pDevice->createShaderModuleUnique( shaderModuleInfo );
 }
