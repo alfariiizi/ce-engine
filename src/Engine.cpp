@@ -26,7 +26,7 @@ Engine::Engine()
     this->CreateDescriptorPool();
     this->AllocateDescriptorSet();
 
-    this->AllocateBuffers();
+    this->AllocateBuffers( sizeof(inputData), sizeof(outputData) );
 
     this->PrepareCommandPool();
     this->PrepareCommandBuffer();
@@ -245,6 +245,7 @@ void Engine::CreateDescriptorPool()
     auto descPoolInfo = vk::DescriptorPoolCreateInfo{};
     descPoolInfo.setPoolSizes( poolSizes );
     descPoolInfo.setMaxSets( 10 );
+    descPoolInfo.setFlags( vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet );
 
     m_pDescPool = m_pDevice->createDescriptorPoolUnique( descPoolInfo );
 }
@@ -262,14 +263,31 @@ void Engine::AllocateDescriptorSet()
     allocInfo.setUsage( vma::MemoryUsage::eCpuToGpu );
 }
 
-void Engine::AllocateBuffers()
+void Engine::AllocateBuffers( size_t inputSize, size_t outputSize )
 {
-    m_inputBuffer = this->CreateBuffer( sizeof(inputData), vk::BufferUsageFlagBits::eStorageBuffer, vma::MemoryUsage::eCpuToGpu );
-    m_outputBuffer = this->CreateBuffer( sizeof(outputData), vk::BufferUsageFlagBits::eStorageBuffer, vma::MemoryUsage::eCpuToGpu );
+    m_inputBuffer = this->CreateBuffer( inputSize, vk::BufferUsageFlagBits::eStorageBuffer, vma::MemoryUsage::eCpuToGpu );
+    m_outputBuffer = this->CreateBuffer( outputSize, vk::BufferUsageFlagBits::eStorageBuffer, vma::MemoryUsage::eCpuToGpu );
     m_delQueue.pushFunction([a=m_allocator, i=m_inputBuffer, o=m_outputBuffer](){
         a.destroyBuffer( i.buffer, i.allocation );
         a.destroyBuffer( o.buffer, o.allocation );
     });
+
+    std::array<vk::DescriptorBufferInfo, 2> descriptorBufferInfos{};
+    descriptorBufferInfos[0].setBuffer( m_inputBuffer.buffer );
+    descriptorBufferInfos[0].setOffset(0);
+    descriptorBufferInfos[0].setRange( inputSize );
+    descriptorBufferInfos[1].setBuffer( m_outputBuffer.buffer );
+    descriptorBufferInfos[1].setOffset(0);
+    descriptorBufferInfos[1].setRange( outputSize );
+
+    auto writeDescriptorSet = vk::WriteDescriptorSet{};
+    writeDescriptorSet.setBufferInfo( descriptorBufferInfos );
+    writeDescriptorSet.setDescriptorType( vk::DescriptorType::eStorageBuffer );
+    writeDescriptorSet.setDescriptorCount( 2 );
+    writeDescriptorSet.setDstSet( m_pSet.get() );
+    writeDescriptorSet.setDstBinding( 0 );
+
+    m_pDevice->updateDescriptorSets( writeDescriptorSet, nullptr );
 }
 
 vk::PhysicalDevice Engine::PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags) const

@@ -29,7 +29,7 @@ private:
     void CreatePipeline();
     void CreateDescriptorPool();
     void AllocateDescriptorSet();
-    void AllocateBuffers();
+    void AllocateBuffers( size_t inputSize, size_t outputSize );
     void PrepareCommandPool();
     void PrepareCommandBuffer();
 
