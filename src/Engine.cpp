@@ -257,7 +257,7 @@ void Engine::AllocateDescriptorSet()
     m_pSet = std::move( m_pDevice->allocateDescriptorSetsUnique( setAllocateInfo )[0] );
 }
 
-vk::PhysicalDevice Engine::PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags)
+vk::PhysicalDevice Engine::PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags) const
 {
     auto physicalDevices = m_pInstance->enumeratePhysicalDevices();
     vk::PhysicalDevice choose;
@@ -280,7 +280,7 @@ vk::PhysicalDevice Engine::PickPhysicalDevice(const std::vector<vk::QueueFlagBit
     return choose;
 }
 
-std::vector<std::optional<size_t>> Engine::FindQueueFamilyIndices( const vk::PhysicalDevice& physicalDevice, const std::vector<vk::QueueFlagBits>& flags )
+std::vector<std::optional<size_t>> Engine::FindQueueFamilyIndices( const vk::PhysicalDevice& physicalDevice, const std::vector<vk::QueueFlagBits>& flags ) const
 {
     auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
     auto& queueFamilies = flags;
@@ -311,7 +311,7 @@ std::vector<std::optional<size_t>> Engine::FindQueueFamilyIndices( const vk::Phy
     return queueFamilyIndices;
 }
 
-vk::UniqueDevice Engine::CreateDevice()
+vk::UniqueDevice Engine::CreateDevice() const
 {
     auto queueFamily = FindQueueFamilyIndices( m_physicalDevice, m_queueFlags );
 
@@ -355,7 +355,7 @@ vk::UniqueDevice Engine::CreateDevice()
     return m_physicalDevice.createDeviceUnique( deviceInfo );
 }
 
-std::vector<const char*> Engine::InstanceExtensions()
+std::vector<const char*> Engine::InstanceExtensions() const
 {
     /// Extensions for GLFW
     // uint32_t glfwExtensionCount = 0;
@@ -371,12 +371,12 @@ std::vector<const char*> Engine::InstanceExtensions()
     return extensions;
 }
 
-std::vector<const char*> Engine::InstanceValidations()
+std::vector<const char*> Engine::InstanceValidations() const
 {
     return { "VK_LAYER_KHRONOS_validation" };
 }
 
-std::vector<char> Engine::readFile( const std::string& fileName, bool isSPIRV )
+std::vector<char> Engine::readFile( const std::string& fileName, bool isSPIRV ) const
 {
     std::ifstream file(fileName, std::ios::ate | std::ios::binary);
 
@@ -401,7 +401,7 @@ std::vector<char> Engine::readFile( const std::string& fileName, bool isSPIRV )
     return buffer;
 }
 
-vk::UniqueShaderModule Engine::CreateShaderModule( const std::string& fileName )
+vk::UniqueShaderModule Engine::CreateShaderModule( const std::string& fileName ) const
 {
     auto code = this->readFile( fileName );
     auto shaderModuleInfo = vk::ShaderModuleCreateInfo{};

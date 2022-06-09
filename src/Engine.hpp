@@ -17,23 +17,23 @@ public:
 
 private:
     void InitializeVulkanBase();
-    void PrepareCommandPool();
-    void PrepareCommandBuffer();
     void CreatePipelineLayout();
     void CreatePipeline();
     void CreateDescriptorPool();
     void AllocateDescriptorSet();
+    void PrepareCommandPool();
+    void PrepareCommandBuffer();
 
 private: // For supporting the initialize vulkan base
-    vk::PhysicalDevice PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags);
-    vk::UniqueDevice CreateDevice();
-    std::vector<char> readFile( const std::string& fileName, bool isSPIRV = true );
-    vk::UniqueShaderModule CreateShaderModule( const std::string& fileName );
+    vk::PhysicalDevice PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags) const;
+    vk::UniqueDevice CreateDevice() const;
+    std::vector<char> readFile( const std::string& fileName, bool isSPIRV = true ) const;
+    vk::UniqueShaderModule CreateShaderModule( const std::string& fileName ) const;
 
 private: // Utility
-    std::vector<const char*> InstanceExtensions();
-    std::vector<const char*> InstanceValidations();
-    std::vector<std::optional<size_t>> FindQueueFamilyIndices( const vk::PhysicalDevice& physicalDevice, const std::vector<vk::QueueFlagBits>& flags );
+    std::vector<const char*> InstanceExtensions() const;
+    std::vector<const char*> InstanceValidations() const;
+    std::vector<std::optional<size_t>> FindQueueFamilyIndices( const vk::PhysicalDevice& physicalDevice, const std::vector<vk::QueueFlagBits>& flags ) const;
 
 private:
     DeletionQueue                           m_delQueue; // For non-smart-pointer (raw heap's allocation) variable
