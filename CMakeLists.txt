@@ -19,6 +19,11 @@ add_executable( main-exec
 
 add_subdirectory( src )
 
+target_include_directories( engineSystem
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/external/VulkanMemoryAllocator-Hpp/include
+)
+
 target_link_libraries( main-exec
     PUBLIC
        engineSystem

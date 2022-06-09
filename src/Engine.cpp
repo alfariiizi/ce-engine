@@ -11,6 +11,11 @@
     #define SHADER_PATH
 #endif
 
+// In *one* source file:
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+#include "vk_mem_alloc.hpp"
+
 Engine::Engine()
 {
     this->InitializeVulkanBase();
@@ -129,6 +134,16 @@ void Engine::InitializeVulkanBase()
         qi.setQueueIndex(0);
         m_computeQueue = m_pDevice->getQueue2( qi );
     }
+
+    auto allocatorInfo = vma::AllocatorCreateInfo{};
+    allocatorInfo.setInstance( m_pInstance.get() );
+    allocatorInfo.setDevice( m_pDevice.get() );
+    allocatorInfo.setPhysicalDevice( m_physicalDevice );
+    allocatorInfo.setVulkanApiVersion( VK_API_VERSION_1_3 );
+    m_allocator = vma::createAllocator( allocatorInfo );
+    m_delQueue.pushFunction([a = m_allocator](){
+        a.destroy();
+    });
 }
 
 void Engine::PrepareCommandPool()
@@ -157,6 +172,7 @@ void Engine::PrepareCommandBuffer()
     /// ------------------
     
     m_pCmdBuffer->bindPipeline( vk::PipelineBindPoint::eCompute, m_pPipeline.get() );
+    m_pCmdBuffer->bindDescriptorSets( vk::PipelineBindPoint::eCompute, m_pPipelineLayout.get(), 0, m_pSet.get(), nullptr );
     m_pCmdBuffer->dispatch( 1, 1, 1 );
 
     /// End Recording

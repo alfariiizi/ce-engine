@@ -5,6 +5,9 @@
 #include <vulkan/vulkan.hpp>
 #include <optional>
 
+#include "vk_mem_alloc.h"
+#include "vk_mem_alloc.hpp"
+
 class Engine
 {
 public:
@@ -36,6 +39,7 @@ private:
     DeletionQueue                           m_delQueue; // For non-smart-pointer (raw heap's allocation) variable
     uint32_t                                m_queueFamilyIndex;
     const std::vector<vk::QueueFlagBits>    m_queueFlags = { vk::QueueFlagBits::eCompute };
+    vma::Allocator                          m_allocator;
 
 private:
     vk::UniqueInstance                          m_pInstance;
