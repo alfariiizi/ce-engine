@@ -17,12 +17,23 @@ add_executable( main-exec
     src/main.cpp
 )
 
+add_subdirectory( external )
 add_subdirectory( src )
 
+# External Dependencies
+# =====================
 target_include_directories( engineSystem
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/external/VulkanMemoryAllocator-Hpp/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/external/SimpleCppBenchmark
 )
+
+# For Cpp file
+target_link_libraries( engineSystem
+    PUBLIC
+        externalDependLib
+)
+# =====================
 
 target_link_libraries( main-exec
     PUBLIC

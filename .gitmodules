@@ -4,3 +4,6 @@
 [submodule "external/VulkanMemoryAllocator-Hpp"]
 	path = external/VulkanMemoryAllocator-Hpp
 	url = https://github.com/YaaZ/VulkanMemoryAllocator-Hpp.git
+[submodule "external/SimpleCppBenchmark"]
+	path = external/SimpleCppBenchmark
+	url = https://github.com/alfariiizi/SimpleCppBenchmark.git
