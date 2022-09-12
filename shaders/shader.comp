@@ -15,5 +15,6 @@ layout( binding = 1 ) buffer outputBuffer
 void main()
 {
     uint index = gl_LocalInvocationID.x + gl_WorkGroupID.x * 512;
+    // uint index = gl_GlobalInvocationID.x;
     outValue[index] = inValue[index] * 1000.0;
 }

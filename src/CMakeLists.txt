@@ -4,6 +4,7 @@ project( engine )
 
 add_library( engineSystem
     Engine.cpp
+    Buffer.cpp
     # vk_init.cpp
     # vk_utils.cpp
 )

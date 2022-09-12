@@ -156,15 +156,18 @@ void Engine::InitializeVulkanBase()
         m_computeQueue = m_pDevice->getQueue2( qi );
     }
 
-    auto allocatorInfo = vma::AllocatorCreateInfo{};
-    allocatorInfo.setInstance( m_pInstance.get() );
-    allocatorInfo.setDevice( m_pDevice.get() );
-    allocatorInfo.setPhysicalDevice( m_physicalDevice );
-    allocatorInfo.setVulkanApiVersion( VK_API_VERSION_1_3 );
-    m_allocator = vma::createAllocator( allocatorInfo );
-    m_delQueue.pushFunction([a = m_allocator](){
-        a.destroy();
-    });
+    /// Allocator from VMA
+    {
+        auto allocatorInfo = vma::AllocatorCreateInfo{};
+        allocatorInfo.setInstance( m_pInstance.get() );
+        allocatorInfo.setDevice( m_pDevice.get() );
+        allocatorInfo.setPhysicalDevice( m_physicalDevice );
+        allocatorInfo.setVulkanApiVersion( VK_API_VERSION_1_3 );
+        m_allocator = vma::createAllocator( allocatorInfo );
+        m_delQueue.pushFunction([a = m_allocator](){
+            a.destroy();
+        });
+    }
 }
 
 void Engine::PrepareCommandPool()
@@ -224,6 +227,7 @@ void Engine::CreatePipelineLayout()
         m_pSetLayout = m_pDevice->createDescriptorSetLayoutUnique( setLayoutInfo );
     }
 
+    /// Pipeline Layout
     auto layoutInfo = vk::PipelineLayoutCreateInfo{};
     layoutInfo.setSetLayouts( m_pSetLayout.get() );
     m_pPipelineLayout = m_pDevice->createPipelineLayoutUnique( layoutInfo );
@@ -284,45 +288,56 @@ void Engine::AllocateDescriptorSet()
 
 void Engine::AllocateBuffers( size_t inputSize, size_t outputSize )
 {
-    m_inputBuffer = this->CreateBuffer( inputSize, vk::BufferUsageFlagBits::eStorageBuffer, vma::MemoryUsage::eCpuToGpu );
-    m_outputBuffer = this->CreateBuffer( outputSize, vk::BufferUsageFlagBits::eStorageBuffer, vma::MemoryUsage::eCpuToGpu );
-    m_delQueue.pushFunction([a=m_allocator, i=m_inputBuffer, o=m_outputBuffer](){
-        a.destroyBuffer( i.buffer, i.allocation );
-        a.destroyBuffer( o.buffer, o.allocation );
-    });
+    /// Allocating input buffer and output buffer
+    m_inputBuffer = Buffer( m_allocator, inputSize, vk::BufferUsageFlagBits::eStorageBuffer, vma::MemoryUsage::eCpuToGpu );
+    m_outputBuffer = Buffer( m_allocator, outputSize, vk::BufferUsageFlagBits::eStorageBuffer, vma::MemoryUsage::eCpuToGpu );
+    // Regist to deletion function
+    m_inputBuffer.DelQueueRegistered( m_delQueue );
+    m_outputBuffer.DelQueueRegistered( m_delQueue );
 
+    /// Description (not descriptor) about the buffers
     std::array<vk::DescriptorBufferInfo, 2> descriptorBufferInfos{};
-    descriptorBufferInfos[0].setBuffer( m_inputBuffer.buffer );
+    descriptorBufferInfos[0].setBuffer( m_inputBuffer.GetBuffer());
     descriptorBufferInfos[0].setOffset(0);
     descriptorBufferInfos[0].setRange( inputSize );
-    descriptorBufferInfos[1].setBuffer( m_outputBuffer.buffer );
+    descriptorBufferInfos[1].setBuffer( m_outputBuffer.GetBuffer() );
     descriptorBufferInfos[1].setOffset(0);
     descriptorBufferInfos[1].setRange( outputSize );
 
+    /// What buffers should the descriptors points to
     auto writeDescriptorSet = vk::WriteDescriptorSet{};
     writeDescriptorSet.setBufferInfo( descriptorBufferInfos );
-    writeDescriptorSet.setDescriptorType( vk::DescriptorType::eStorageBuffer );
+    writeDescriptorSet.setDescriptorType( vk::DescriptorType::eStorageBuffer ); // So, the descriptor also has some type :)
     writeDescriptorSet.setDescriptorCount( 2 );
     writeDescriptorSet.setDstSet( m_pSet.get() );
     writeDescriptorSet.setDstBinding( 0 );
 
+    /// Updating that the descriptor now has pointed to the buffer
     m_pDevice->updateDescriptorSets( writeDescriptorSet, nullptr );
 }
 
 vk::PhysicalDevice Engine::PickPhysicalDevice(const std::vector<vk::QueueFlagBits>& flags) const
 {
+    /// Enumerating all the physical devices that available
     auto physicalDevices = m_pInstance->enumeratePhysicalDevices();
+
+    /// Finding the best suitable physical device
     vk::PhysicalDevice choose;
     for( auto& physicalDevice : physicalDevices )
     {
         bool found = true;
+
+        // Finding phyiscal device that has "flags" that we want
         auto indices = FindQueueFamilyIndices( physicalDevice, flags );
+
+        // If the indices has empty value (has no value)
         for( const auto& i : indices )
         {
             if( !i.has_value() )
                 found = false;
         }
 
+        // If the indices has value
         if( found )
         {
             choose = physicalDevice;
@@ -453,6 +468,12 @@ std::vector<char> Engine::readFile( const std::string& fileName, bool isSPIRV ) 
     return buffer;
 }
 
+/**
+ * @brief Creating shader module
+ * 
+ * @param fileName 
+ * @return vk::UniqueShaderModule 
+ */
 vk::UniqueShaderModule Engine::CreateShaderModule( const std::string& fileName ) const
 {
     auto code = this->readFile( fileName );
@@ -463,20 +484,20 @@ vk::UniqueShaderModule Engine::CreateShaderModule( const std::string& fileName )
     return m_pDevice->createShaderModuleUnique( shaderModuleInfo );
 }
 
-Buffer Engine::CreateBuffer( size_t allocSize, vk::BufferUsageFlags bufferUsageFlag, vma::MemoryUsage memoryUsage ) const
-{
-    auto bufferInfo = vk::BufferCreateInfo{};
-    bufferInfo.setSize( allocSize );
-    bufferInfo.setUsage( bufferUsageFlag );
-    bufferInfo.setSharingMode( vk::SharingMode::eExclusive );
+// Buffer Engine::CreateBuffer( size_t allocSize, vk::BufferUsageFlags bufferUsageFlag, vma::MemoryUsage memoryUsage ) const
+// {
+//     auto bufferInfo = vk::BufferCreateInfo{};
+//     bufferInfo.setSize( allocSize );
+//     bufferInfo.setUsage( bufferUsageFlag );
+//     bufferInfo.setSharingMode( vk::SharingMode::eExclusive );
 
-    auto allocInfo = vma::AllocationCreateInfo{};
-    allocInfo.setUsage( memoryUsage );
+//     auto allocInfo = vma::AllocationCreateInfo{};
+//     allocInfo.setUsage( memoryUsage );
 
-    auto tmp = m_allocator.createBuffer( bufferInfo, allocInfo );
-    Buffer buffer;
-    buffer.buffer = tmp.first;
-    buffer.allocation = tmp.second;
+//     auto tmp = m_allocator.createBuffer( bufferInfo, allocInfo );
+//     Buffer buffer;
+//     buffer.buffer = tmp.first;
+//     buffer.allocation = tmp.second;
 
-    return buffer;
-}
+//     return buffer;
+// }

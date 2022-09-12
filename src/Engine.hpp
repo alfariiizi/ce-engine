@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DeletionQueue.hpp"
+#include "Buffer.hpp"
 
 #include <vulkan/vulkan.hpp>
 #include <optional>
@@ -8,13 +9,13 @@
 #include "vk_mem_alloc.h"
 #include "vk_mem_alloc.hpp"
 
-struct Buffer
-{
-    vk::Buffer buffer;
-    // vk::DeviceMemory memory;
-    // vk::DeviceSize size;
-    vma::Allocation allocation;
-};
+// struct Buffer
+// {
+//     vk::Buffer buffer;
+//     // vk::DeviceMemory memory;
+//     // vk::DeviceSize size;
+//     vma::Allocation allocation;
+// };
 
 class Engine
 {
@@ -29,7 +30,7 @@ private:
     void CreatePipeline();
     void CreateDescriptorPool();
     void AllocateDescriptorSet();
-    void AllocateBuffers( size_t inputSize, size_t outputSize );
+    void AllocateBuffers( size_t inputSize, size_t outputSize );    // Allocating buffer for input and output
     void PrepareCommandPool();
     void PrepareCommandBuffer();
 
@@ -41,26 +42,26 @@ private: // Utility
     std::vector<const char*> InstanceExtensions() const;
     std::vector<const char*> InstanceValidations() const;
     std::vector<std::optional<size_t>> FindQueueFamilyIndices( const vk::PhysicalDevice& physicalDevice, const std::vector<vk::QueueFlagBits>& flags ) const;
-    Buffer CreateBuffer( size_t allocSize, vk::BufferUsageFlags bufferUsageFlag, vma::MemoryUsage memoryUsage ) const;
+    // Buffer CreateBuffer( size_t allocSize, vk::BufferUsageFlags bufferUsageFlag, vma::MemoryUsage memoryUsage ) const;
 
 private:
     template<typename T>
     void CopyToBuffer( T* dataToCopy, size_t dataSize, Buffer dstBuffer )
     {
         void* data;
-        if( m_allocator.mapMemory( dstBuffer.allocation, &data ) != vk::Result::eSuccess )
+        if( m_allocator.mapMemory( dstBuffer.GetAllocation(), &data ) != vk::Result::eSuccess )
             throw std::runtime_error("Failed to mapping memory\n");
         memcpy( data, dataToCopy, dataSize );
-        m_allocator.unmapMemory( dstBuffer.allocation );
+        m_allocator.unmapMemory( dstBuffer.GetAllocation() );
     }
     template<typename T>
     void CopyFromBuffer( T* variable, size_t dataSize, Buffer srcBuffer )
     {
         void* data;
-        if( m_allocator.mapMemory( srcBuffer.allocation, &data ) != vk::Result::eSuccess )
+        if( m_allocator.mapMemory( srcBuffer.GetAllocation(), &data ) != vk::Result::eSuccess )
             throw std::runtime_error("Failed to mapping memory\n");
         memcpy( variable, data, dataSize );
-        m_allocator.unmapMemory( srcBuffer.allocation );
+        m_allocator.unmapMemory( srcBuffer.GetAllocation() );
     }
 
 private:
